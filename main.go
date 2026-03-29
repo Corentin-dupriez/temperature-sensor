@@ -1,11 +1,11 @@
 package main
 
 import (
-	"context"
 	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 
-	"github.com/redis/go-redis/v9"
 	"go.bug.st/serial"
 )
 
@@ -15,14 +15,15 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(port)
+	ReadPort(port)
 	client := ConnectToDB()
-	ctx := context.Background()
+	// ctx := context.Background()
 
-	client.XAdd(ctx, &redis.XAddArgs{
-		Stream: "stream",
-		Values: map[string]interface{}{"temp": "20", "humidity": "40"},
-		ID:     "*",
-	})
+	// client.XAdd(ctx, &redis.XAddArgs{
+	// 	Stream: "stream",
+	// 	Values: map[string]interface{}{"temp": "20", "humidity": "40"},
+	// 	ID:     "*",
+	// })
 	defer client.Close()
 }
 
@@ -57,6 +58,27 @@ func ReadPort(p serial.Port) {
 		if n == 0 {
 			break
 		}
-		fmt.Printf("%v", string(buf))
+		temperature, humidity := ProcessBuffer(buf)
+		fmt.Println(temperature, humidity)
 	}
+}
+
+func ProcessBuffer(b []byte) (float64, float64) {
+	str := string(b)
+	string := strings.Split(str, " ")
+
+	tempString := strings.Split(string[0], ":")[1]
+	humidityString := strings.Split(string[1], ":")[1]
+
+	tempFloat, err := strconv.ParseFloat(tempString, 64)
+	if err != nil {
+		panic(err)
+	}
+
+	humidityFloat, err := strconv.ParseFloat(humidityString, 64)
+	if err != nil {
+		panic(err)
+	}
+
+	return tempFloat, humidityFloat
 }
