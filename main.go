@@ -36,7 +36,7 @@ func OpenPort() (serial.Port, error) {
 		return nil, errors.New("not able to read ports")
 	}
 	for _, port := range ports {
-		if port == "dev/cu.usbserial-130" {
+		if port == "/dev/tty.usbserial-130" {
 			port, err := serial.Open(port, mode)
 			if err != nil {
 				panic(err)
@@ -45,4 +45,18 @@ func OpenPort() (serial.Port, error) {
 		}
 	}
 	return nil, errors.New("arduino is not connected")
+}
+
+func ReadPort(p serial.Port) {
+	buf := make([]byte, 100)
+	for {
+		n, err := p.Read(buf)
+		if err != nil {
+			panic(err)
+		}
+		if n == 0 {
+			break
+		}
+		fmt.Printf("%v", string(buf))
+	}
 }
