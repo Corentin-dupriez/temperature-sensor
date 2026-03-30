@@ -22,6 +22,3 @@ func ConnectToHistoricalDB() *sql.DB {
 
 	return db
 }
-
-func WriteToDB(db *sql.DB, values []string) {
-}

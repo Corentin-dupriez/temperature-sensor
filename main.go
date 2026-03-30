@@ -1,11 +1,13 @@
 package main
 
 import (
+	"context"
 	"errors"
-	"fmt"
+	"log/slog"
 	"strconv"
 	"strings"
 
+	"github.com/redis/go-redis/v9"
 	"go.bug.st/serial"
 )
 
@@ -14,16 +16,10 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(port)
-	ReadPort(port)
+	ctx := context.Background()
 	client := ConnectToDB()
-	// ctx := context.Background()
+	ReadPort(port, ctx, client)
 
-	// client.XAdd(ctx, &redis.XAddArgs{
-	// 	Stream: "stream",
-	// 	Values: map[string]interface{}{"temp": "20", "humidity": "40"},
-	// 	ID:     "*",
-	// })
 	defer client.Close()
 }
 
@@ -48,7 +44,15 @@ func OpenPort() (serial.Port, error) {
 	return nil, errors.New("arduino is not connected")
 }
 
-func ReadPort(p serial.Port) {
+func WriteToDB(client *redis.Client, ctx context.Context, temp float64, humidity float64) {
+	client.XAdd(ctx, &redis.XAddArgs{
+		Stream: "stream",
+		Values: map[string]interface{}{"temp": temp, "humidity": humidity},
+		ID:     "*",
+	})
+}
+
+func ReadPort(p serial.Port, ctx context.Context, client *redis.Client) {
 	buf := make([]byte, 100)
 	for {
 		n, err := p.Read(buf)
@@ -59,25 +63,44 @@ func ReadPort(p serial.Port) {
 			break
 		}
 		temperature, humidity := ProcessBuffer(buf)
-		fmt.Println(temperature, humidity)
+		WriteToDB(client, ctx, temperature, humidity)
 	}
+}
+
+func SplitString(s string, sep string, index int) (string, error) {
+	splitString := strings.Split(s, sep)
+	if len(splitString) < index {
+		return "", errors.New("unable to split the string correctly")
+	}
+	return splitString[index], nil
 }
 
 func ProcessBuffer(b []byte) (float64, float64) {
 	str := string(b)
 	string := strings.Split(str, " ")
 
-	tempString := strings.Split(string[0], ":")[1]
-	humidityString := strings.Split(string[1], ":")[1]
-
-	tempFloat, err := strconv.ParseFloat(tempString, 64)
+	tempString, err := SplitString(string[0], ":", 1)
 	if err != nil {
 		panic(err)
 	}
 
-	humidityFloat, err := strconv.ParseFloat(humidityString, 64)
+	humidityString, err := SplitString(string[1], ":", 1)
 	if err != nil {
 		panic(err)
+	}
+	humidityString, err = SplitString(humidityString, "%", 0)
+	if err != nil {
+		panic(err)
+	}
+
+	tempFloat, err := strconv.ParseFloat(tempString, 64)
+	if err != nil {
+		slog.Warn("Unable to parse the temperature")
+	}
+
+	humidityFloat, err := strconv.ParseFloat(humidityString, 64)
+	if err != nil {
+		slog.Warn("Unable to parse the humidity")
 	}
 
 	return tempFloat, humidityFloat
