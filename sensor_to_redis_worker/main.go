@@ -44,14 +44,6 @@ func OpenPort() (serial.Port, error) {
 	return nil, errors.New("arduino is not connected")
 }
 
-func WriteToDB(client *redis.Client, ctx context.Context, temp float64, humidity float64) {
-	client.XAdd(ctx, &redis.XAddArgs{
-		Stream: "stream",
-		Values: map[string]interface{}{"temp": temp, "humidity": humidity},
-		ID:     "*",
-	})
-}
-
 func ReadPort(p serial.Port, ctx context.Context, client *redis.Client) {
 	buf := make([]byte, 100)
 	for {
