@@ -44,12 +44,12 @@ func ReadPort(p serial.Port, ctx context.Context, client *redis.Client) {
 		if n == 0 {
 			break
 		}
-		temperature, humidity := ProcessBuffer(buf)
+		temperature, humidity := processBuffer(buf)
 		redisdb.WriteToDB(client, ctx, temperature, humidity)
 	}
 }
 
-func SplitString(s string, sep string, index int) (string, error) {
+func splitString(s string, sep string, index int) (string, error) {
 	splitString := strings.Split(s, sep)
 	if len(splitString) < index {
 		return "", errors.New("unable to split the string correctly")
@@ -57,20 +57,20 @@ func SplitString(s string, sep string, index int) (string, error) {
 	return splitString[index], nil
 }
 
-func ProcessBuffer(b []byte) (float64, float64) {
+func processBuffer(b []byte) (float64, float64) {
 	str := string(b)
 	string := strings.Split(str, " ")
 
-	tempString, err := SplitString(string[0], ":", 1)
+	tempString, err := splitString(string[0], ":", 1)
 	if err != nil {
 		panic(err)
 	}
 
-	humidityString, err := SplitString(string[1], ":", 1)
+	humidityString, err := splitString(string[1], ":", 1)
 	if err != nil {
 		panic(err)
 	}
-	humidityString, err = SplitString(humidityString, "%", 0)
+	humidityString, err = splitString(humidityString, "%", 0)
 	if err != nil {
 		panic(err)
 	}
