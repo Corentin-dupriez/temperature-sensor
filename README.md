@@ -7,9 +7,10 @@ Temperature and humidity in real time.
 It is composed of several parts:
 
 ```mermaid
-Arduino sensor -> Go Worker
-Go Worker -> Python FastAPI server
-Python FastAPI server -> Vue.js dashboard
+flowchart LR
+  Arduino sensor -> Go Worker
+  Go Worker -> Python FastAPI server
+  Python FastAPI server -> Vue.js dashboard
 ```
 
 ## Workflow
