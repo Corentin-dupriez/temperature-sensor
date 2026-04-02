@@ -7,10 +7,10 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-func ConnectToDB() *redis.Client {
+func ConnectToDB(connStr string, password string) *redis.Client {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
+		Addr:     connStr,
+		Password: password,
 		DB:       0,
 		Protocol: 2,
 	})

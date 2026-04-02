@@ -13,7 +13,7 @@ import (
 	"go.bug.st/serial"
 )
 
-func OpenPort() (serial.Port, error) {
+func OpenPort(portName string) (serial.Port, error) {
 	// dev/cu.usbserial-130
 	mode := &serial.Mode{
 		BaudRate: 9600,
@@ -23,7 +23,7 @@ func OpenPort() (serial.Port, error) {
 		return nil, errors.New("not able to read ports")
 	}
 	for _, port := range ports {
-		if port == "/dev/tty.usbserial-130" {
+		if port == portName {
 			port, err := serial.Open(port, mode)
 			if err != nil {
 				panic(err)
@@ -39,7 +39,7 @@ func ReadPort(p serial.Port, ctx context.Context, client *redis.Client) {
 	for {
 		n, err := p.Read(buf)
 		if err != nil {
-			panic(err)
+			slog.Error("impossible to read the port", "error", err)
 		}
 		if n == 0 {
 			break

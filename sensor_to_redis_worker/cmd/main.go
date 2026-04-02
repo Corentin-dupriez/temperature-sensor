@@ -7,16 +7,21 @@ import (
 
 	redisdb "github.com/Corentin-dupriez/temperature-sensor/internal/redis_db"
 	sensorworker "github.com/Corentin-dupriez/temperature-sensor/internal/sensor_worker"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	port, err := sensorworker.OpenPort()
+	err := godotenv.Load()
+	if err != nil {
+		slog.Error("error reading the .env file")
+	}
+	port, err := sensorworker.OpenPort(os.Getenv("ARDUINO_PORT"))
 	if err != nil {
 		slog.Error("Error reading the port: ", "error", err)
 		os.Exit(1)
 	}
 	ctx := context.Background()
-	client := redisdb.ConnectToDB()
+	client := redisdb.ConnectToDB(os.Getenv("REDIS_CONN_STR"), os.Getenv("REDIS_PASSWORD"))
 	sensorworker.ReadPort(port, ctx, client)
 
 	defer client.Close()
