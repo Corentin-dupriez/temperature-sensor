@@ -8,9 +8,9 @@ It is composed of several parts:
 
 ```mermaid
 flowchart LR;
-  Arduino sensor -> Go Worker
-  Go Worker -> Python FastAPI server
-  Python FastAPI server -> Vue.js dashboard
+  Arduino sensor --> Go Worker
+  Go Worker --> Python FastAPI server
+  Python FastAPI server --> Vue.js dashboard
 ```
 
 ## Workflow
