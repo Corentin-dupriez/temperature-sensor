@@ -8,9 +8,9 @@ It is composed of several parts:
 
 ```mermaid
 graph TD;
-  Arduino sensor --> Go Worker;
-  Go Worker --> Python FastAPI server;
-  Python FastAPI server --> Vue.js dashboard;
+  id1(Arduino sensor) --> id2(Go Worker);
+  id2(Go Worker) --> id3(Python FastAPI server);
+  id3(Python FastAPI server) --> id4(Vue.js dashboard);
 ```
 
 ## Workflow
