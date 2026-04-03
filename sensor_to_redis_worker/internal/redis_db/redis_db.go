@@ -3,6 +3,7 @@ package redisdb
 
 import (
 	"context"
+	"log/slog"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -20,11 +21,19 @@ func ConnectToDB(connStr string, password string) *redis.Client {
 func CreateConsumerGroups(ctx context.Context, client *redis.Client) {
 	_, err := client.XGroupCreate(ctx, "stream", "server-consumer", "$").Result()
 	if err != nil {
-		panic(err)
+		if redis.HasErrorPrefix(err, "BUSYGROUP") {
+			slog.Info("Group already exists, skipping", "group", "server-consumer")
+		} else {
+			panic(err)
+		}
 	}
 	_, err = client.XGroupCreate(ctx, "stream", "histo-db-consumer", "$").Result()
 	if err != nil {
-		panic(err)
+		if redis.HasErrorPrefix(err, "BUSYGROUP") {
+			slog.Info("Group already exists, skipping", "group", "server-consumer")
+		} else {
+			panic(err)
+		}
 	}
 }
 

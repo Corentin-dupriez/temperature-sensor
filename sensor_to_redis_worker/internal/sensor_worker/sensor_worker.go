@@ -46,6 +46,7 @@ func ReadPort(p serial.Port, ctx context.Context, client *redis.Client) {
 		}
 		temperature, humidity := processBuffer(buf)
 		redisdb.WriteToDB(client, ctx, temperature, humidity)
+		slog.Info("Saved data to redis", "temperature", temperature, "humidity", humidity)
 	}
 }
 
