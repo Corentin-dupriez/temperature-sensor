@@ -24,6 +24,7 @@ func main() {
 	}
 	ctx := context.Background()
 	client := redisdb.ConnectToDB(os.Getenv("REDIS_CONN_STR"), os.Getenv("REDIS_PASSWORD"))
+	slog.Info("Connected to Redis DB")
 	redisdb.CreateConsumerGroups(ctx, client)
 	sensorworker.ReadPort(port, ctx, client)
 

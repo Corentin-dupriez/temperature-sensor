@@ -38,8 +38,6 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         while entry:
             await asyncio.sleep(1)
             try:
-                last_id: int = entry[0][1][0][0]
-                print(last_id)
                 entry: ResponseT = rdb.xreadgroup(
                     groupname="server-consumer",
                     consumername="server",
