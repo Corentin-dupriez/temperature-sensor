@@ -5,6 +5,10 @@ from dotenv import load_dotenv
 import os
 import logging
 from redis.typing import ResponseT
+from src.models import TempReading
+from src.redis_db.redis_db import parse_data
+import psycopg2
+
 
 load_dotenv("../.env")
 
@@ -21,6 +25,28 @@ logging.info("Connected to Redis database")
 app = FastAPI()
 
 
+@app.get("/today")
+async def get_today_reading() -> list:
+    readings = []
+    with psycopg2.connect(
+        dbname="postgres", user="postgres", password="example", host="localhost"
+    ) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT * from readings where date_trunc('day', time_reading) = date_trunc('day', now())"
+            )
+            res = cur.fetchall()
+    for result in res:
+        readings.append(
+            TempReading(
+                temp=result[1],
+                humidity=result[2],
+                reading_datetime=result[3].strftime("%d/%m/%Y %H:%M:%S"),
+            ).model_dump()
+        )
+    return readings
+
+
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
@@ -32,38 +58,25 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
             streams={stream_key: ">"},
             count=1,
         )
-        data: dict = parse_data(entry)
-        print(data)
-        await websocket.send_json({"data": data})
-        while entry:
-            await asyncio.sleep(1)
-            try:
-                entry: ResponseT = rdb.xreadgroup(
-                    groupname="server-consumer",
-                    consumername="server",
-                    streams={stream_key: ">"},
-                    count=1,
-                )
-                data: dict = parse_data(entry)
-                print(data)
-                await websocket.send_json({"data": data})
-            except IndexError:
-                pass
-
-
-def parse_data(entry: ResponseT) -> dict | None:
-    """Parses a Redis stream row and returns a dictionary containing the temperature and humidity.
-    Args:
-        entry: A Redis stream row containing the row ID and the data associated do the entry.
-
-    Returns:
-        dict: a dictionary containing the temperature and humidity.
-    """
-    try:
-        data: dict = entry[0][1][0][1]
-        return {
-            key.decode("utf-8"): float(value.decode("utf-8"))
-            for key, value in data.items()
-        }
-    except IndexError:
-        pass
+        if entry != []:
+            data: dict = await parse_data(entry)
+            print(data)
+            new_data: TempReading = TempReading(**data)
+            await websocket.send_json({"data": data})
+            while entry:
+                await asyncio.sleep(1)
+                try:
+                    entry: ResponseT = rdb.xreadgroup(
+                        groupname="server-consumer",
+                        consumername="server",
+                        streams={stream_key: ">"},
+                        count=1,
+                    )
+                    data: dict = await parse_data(entry)
+                    print(data)
+                    await websocket.send_json({"data": data})
+                except IndexError:
+                    pass
+        else:
+            print("No new entry, sleeping")
+        await asyncio.sleep(1)
