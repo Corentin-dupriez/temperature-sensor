@@ -2,18 +2,19 @@ package redisdb
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 	redis "github.com/redis/go-redis/v9"
 )
 
 type TempReading struct {
-	humidity    float64
-	temperature float64
+	Humidity    float64
+	Temperature float64
+	TimeReading time.Time
 }
 
 func ConnectToRedis() *redis.Client {
@@ -45,7 +46,8 @@ func ReadFromRedis(ctx context.Context, rdb *redis.Client) []redis.XStream {
 	return res
 }
 
-func ParseFromStreamResult(res []redis.XStream) {
+func ParseFromStreamResult(res []redis.XStream, ctx context.Context, rdb *redis.Client) TempReading {
+	var tempreading TempReading
 	for _, stream := range res {
 		for _, msg := range stream.Messages {
 			reading := msg.Values
@@ -58,12 +60,18 @@ func ParseFromStreamResult(res []redis.XStream) {
 				panic(err)
 			}
 
-			tempreading := TempReading{
-				humidity:    humidity,
-				temperature: temp,
+			timeReading, err := time.Parse(time.RFC3339Nano, reading["time"].(string))
+			if err != nil {
+				panic(err)
 			}
-			fmt.Println(tempreading.humidity)
-			fmt.Println(tempreading.temperature)
+
+			tempreading = TempReading{
+				Humidity:    humidity,
+				Temperature: temp,
+				TimeReading: timeReading,
+			}
+			rdb.XAck(ctx, "stream", "histo-db-consumer", msg.ID)
 		}
 	}
+	return tempreading
 }

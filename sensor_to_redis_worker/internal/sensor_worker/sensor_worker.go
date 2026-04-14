@@ -7,11 +7,18 @@ import (
 	"log/slog"
 	"strconv"
 	"strings"
+	"time"
 
 	redisdb "github.com/Corentin-dupriez/temperature-sensor/internal/redis_db"
 	"github.com/redis/go-redis/v9"
 	"go.bug.st/serial"
 )
+
+type tempReading struct {
+	temperature float64
+	humidity    float64
+	timeReading time.Time
+}
 
 func OpenPort(portName string) (serial.Port, error) {
 	// dev/cu.usbserial-130
@@ -45,8 +52,13 @@ func ReadPort(p serial.Port, ctx context.Context, client *redis.Client) {
 			break
 		}
 		temperature, humidity := processBuffer(buf)
-		redisdb.WriteToDB(client, ctx, temperature, humidity)
-		slog.Info("Saved data to redis", "temperature", temperature, "humidity", humidity)
+		tempreading := tempReading{
+			temperature: temperature,
+			humidity:    humidity,
+			timeReading: time.Now(),
+		}
+		redisdb.WriteToDB(client, ctx, tempreading.temperature, tempreading.humidity, tempreading.timeReading)
+		slog.Info("Saved data to redis", "temperature", temperature, "humidity", humidity, "time", tempreading.timeReading)
 	}
 }
 

@@ -4,6 +4,7 @@ package redisdb
 import (
 	"context"
 	"log/slog"
+	"time"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -18,8 +19,11 @@ func ConnectToDB(connStr string, password string) *redis.Client {
 	return rdb
 }
 
+func CreateStream() {
+}
+
 func CreateConsumerGroups(ctx context.Context, client *redis.Client) {
-	_, err := client.XGroupCreate(ctx, "stream", "server-consumer", "$").Result()
+	_, err := client.XGroupCreateMkStream(ctx, "stream", "server-consumer", "$").Result()
 	if err != nil {
 		if redis.HasErrorPrefix(err, "BUSYGROUP") {
 			slog.Info("Group already exists, skipping", "group", "server-consumer")
@@ -37,10 +41,10 @@ func CreateConsumerGroups(ctx context.Context, client *redis.Client) {
 	}
 }
 
-func WriteToDB(client *redis.Client, ctx context.Context, temp float64, humidity float64) {
+func WriteToDB(client *redis.Client, ctx context.Context, temp float64, humidity float64, timeReading time.Time) {
 	client.XAdd(ctx, &redis.XAddArgs{
 		Stream: "stream",
-		Values: map[string]interface{}{"temp": temp, "humidity": humidity},
+		Values: map[string]interface{}{"temp": temp, "humidity": humidity, "time": timeReading},
 		ID:     "*",
 	})
 }

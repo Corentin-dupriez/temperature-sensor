@@ -3,15 +3,11 @@ package historicaldb
 import (
 	"database/sql"
 	"fmt"
+	redisdb "histo-db/internal/redis_db"
 	"log"
 
 	_ "github.com/lib/pq"
 )
-
-type tempReading struct {
-	temperature float64
-	huimidity   float64
-}
 
 func ConnectToHistoricalDB() *sql.DB {
 	connStr := "postgres://postgres:example@localhost:5432/postgres?sslmode=disable"
@@ -26,17 +22,19 @@ func ConnectToHistoricalDB() *sql.DB {
 		panic(err)
 	}
 	fmt.Println("Connected to Postgres")
-	return db
-}
-
-func addTempReading(db *sql.DB, t tempReading) (int64, error) {
-	result, err := db.Exec("INSERT INTO readings (temperature, humidity) VALUES(?,?)", t.temperature, t.huimidity)
+	res, err := db.Exec("CREATE TABLE IF NOT EXISTS readings (id serial, temperature float, humidity float, time_reading timestamp)")
 	if err != nil {
 		panic(err)
 	}
-	id, err := result.LastInsertId()
+	fmt.Println(res)
+	return db
+}
+
+func AddTempReading(db *sql.DB, t redisdb.TempReading) (int, error) {
+	var id int
+	err := db.QueryRow("INSERT INTO readings (temperature, humidity, time_reading) VALUES ($1, $2, $3) RETURNING id", t.Temperature, t.Humidity, t.TimeReading).Scan(&id)
 	if err != nil {
-		panic(err)
+		return 0, fmt.Errorf("AddTempReading: %v", err)
 	}
 	return id, nil
 }
