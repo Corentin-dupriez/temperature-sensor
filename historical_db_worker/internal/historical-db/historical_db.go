@@ -3,8 +3,9 @@ package historicaldb
 import (
 	"database/sql"
 	"fmt"
-	redisdb "histo-db/internal/redis_db"
 	"log"
+
+	redisdb "histo-db/internal/redis_db"
 
 	_ "github.com/lib/pq"
 )

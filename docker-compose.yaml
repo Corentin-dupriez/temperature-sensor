@@ -3,6 +3,10 @@ services:
     image: redis:8.6.2-alpine
     ports:
       - 6379:6379
+    networks:
+      - backend
+    volumes:
+      - redis-data:/data
   postgres:
     image: postgres:latest
     ports:
@@ -19,9 +23,35 @@ services:
       - 8000:8000
     networks:
       - backend
+      - frontend
     environment:
-      REDIS_CONN_STR: backend:6379
+      REDIS_CONN_STR: redis:6379
+      REDIS_PYTHON_CONSUMER_GROUP: server-consumer
+      REDIS_PYTHON_CONSUMER_NAME: server
+      POSTGRES_DB_HOST: postgres
+      APP_HOST: localhost
+      POSTGRES_DB_NAME: postgres
+      POSTGRES_DB_USER: postgres
+      POSTGRES_DB_PASSWORD: example
+  dashboard:
+    image: corentindupriez/dashboard-app
+    ports:
+      - 8080:8080
+    networks:
+      - frontend
+  historical-worker:
+    image: corentindupriez/redis-to-historical
+    depends_on:
+      - redis
+    networks:
+      - backend
+    environment:
+      REDIS_CONN_STR: redis:6379
+      REDIS_PASSWORD:
+
 volumes:
   db-data:
+  redis-data:
 networks:
   backend:
+  frontend:

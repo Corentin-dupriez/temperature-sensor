@@ -60,36 +60,38 @@ export default {
   this.connection.onopen = () => {
     console.log("WebSocket connected")
   }
-this.connection.onmessage = (event) => {
-  const payload = JSON.parse(event.data).data
-  console.log("Payload:", payload)
-  console.log("Temp:", payload.temp, typeof payload.temp)
-  const newLabels = [
-    ...this.chartData.labels,
-    new Date().toLocaleTimeString()
-  ]
-
-  const newData = [
-    ...this.chartData.datasets[0].data,
-    payload.temp
-  ]
-
-  // limit size
-  if (newLabels.length > 20) {
-    newLabels.shift()
-    newData.shift()
-  }
-
-  // ✅ completely new object (NO mutation)
-  this.chartData = {
-    labels: newLabels,
-    datasets: [
-      {
-        ...this.chartData.datasets[0],
-        data: newData
-      }
+  this.connection.onmessage = (event) => {
+    const payload = JSON.parse(event.data).data
+    console.log("Payload:", payload)
+    console.log("Temp:", payload.temp, typeof payload.temp)
+    const newLabels = [
+      ...this.chartData.labels,
+      new Date().toLocaleTimeString()
     ]
+
+    const newData = [
+      ...this.chartData.datasets[0].data,
+      payload.temp
+    ]
+
+    // limit size
+    if (newLabels.length > 20) {
+      newLabels.shift()
+      newData.shift()
+    }
+
+    // ✅ completely new object (NO mutation)
+    this.chartData = {
+      labels: newLabels,
+      datasets: [
+        {
+          ...this.chartData.datasets[0],
+          data: newData
+        }
+      ]
+    }
   }
-}  }
+}
+
 }
 </script>

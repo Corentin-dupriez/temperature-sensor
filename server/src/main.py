@@ -7,7 +7,6 @@ import logging
 from redis.typing import ResponseT
 from src.models import TempReading
 from src.redis_db.redis_db import parse_data
-import psycopg2
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from fastapi.responses import JSONResponse
@@ -18,7 +17,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 load_dotenv("../.env")
 
-stream_key = "stream"
+REDIS_STREAM_KEY = "stream"
 
 # The redis_url and redis_port correspond to the Redis database containing the temperature and humidity measures
 redis_url, redis_port = os.environ.get("REDIS_CONN_STR", "backend:6379").split(":")
@@ -27,7 +26,7 @@ rdb = redis.Redis(host=redis_url, port=int(redis_port), db=0, protocol=2)
 
 logging.info("Connected to Redis database")
 
-DATABASE_URL = f"postgresql://{os.environ.get('POSTGRES_DB_USER')}:{os.environ.get('POSTGRES_DB_PASSWORD')}@{os.environ.get('POSTGRES_DB_HOST')}:5432/{os.environ.get('POSTGRES_DB_NAME')}"
+DATABASE_URL = f"postgresql://{os.environ.get('POSTGRES_DB_USER', 'postgres')}:{os.environ.get('POSTGRES_DB_PASSWORD', 'example')}@{os.environ.get('POSTGRES_DB_HOST', 'localhost')}:5432/{os.environ.get('POSTGRES_DB_NAME', 'postgres')}"
 
 
 engine = create_engine(
@@ -101,7 +100,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
         entry: ResponseT = rdb.xreadgroup(
             groupname=os.environ.get("REDIS_PYTHON_CONSUMER_GROUP", "server-consumer"),
             consumername=os.environ.get("REDIS_PYTHON_CONSUMER_NAME", "server"),
-            streams={stream_key: ">"},
+            streams={REDIS_STREAM_KEY: ">"},
             count=1,
         )
         if entry != []:
@@ -119,7 +118,7 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
                         consumername=os.environ.get(
                             "REDIS_PYTHON_CONSUMER_NAME", "server"
                         ),
-                        streams={stream_key: ">"},
+                        streams={REDIS_STREAM_KEY: ">"},
                         count=1,
                     )
                     data: dict = await parse_data(entry)

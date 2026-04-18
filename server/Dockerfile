@@ -11,4 +11,4 @@ EXPOSE 8000
 RUN useradd app
 USER app
 
-CMD ["fastapi", "dev", "./src/main.py"]
+CMD ["fastapi", "run", "./src/main.py", "--host", "0.0.0.0"]

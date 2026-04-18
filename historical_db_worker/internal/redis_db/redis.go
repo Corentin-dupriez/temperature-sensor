@@ -2,6 +2,7 @@ package redisdb
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"os"
 	"strconv"
@@ -20,7 +21,7 @@ type TempReading struct {
 func ConnectToRedis() *redis.Client {
 	err := godotenv.Load("../.env")
 	if err != nil {
-		panic(err)
+		fmt.Println("env file not found, gathering secrets from environment")
 	}
 	redisConnString := os.Getenv("REDIS_CONN_STR")
 	redisPassword := os.Getenv("REDIS_PASSWORD")
