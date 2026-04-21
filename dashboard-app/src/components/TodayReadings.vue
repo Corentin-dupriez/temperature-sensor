@@ -1,19 +1,29 @@
 <template>
   <div>
-    <button @click="getToday">Get Today's readings</button>
+    <p v-if="data">{{data}}</p>
+    <p v-else>No readings for today</p>
   </div>
 </template>
 <script>
 export default {
-  methods: {
-    getToday() {
+  data () {
+    return {
+      data : null
+    }
+  },
+  mounted() {
+
       fetch(`http://localhost:8000/today`, {
         method: "GET",
       })
       .then(response => response.json())
-      .then(data => console.log(data))
+      .then(data => {
+        this.data = data
+      })
+      .catch(err => {
+      console.log(err)
+      }
+      )
     }
-  },
-  mounted(){}
 }
 </script>

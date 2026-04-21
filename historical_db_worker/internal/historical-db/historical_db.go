@@ -4,14 +4,31 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"log/slog"
+	"os"
 
 	redisdb "histo-db/internal/redis_db"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
+func generateConnString() (c string) {
+	dbUser := os.Getenv("POSTGRES_DB_USER")
+	dbPassword := os.Getenv("POSTGRES_DB_PASSWORD")
+	pgHost := os.Getenv("POSTGRES_DB_HOST")
+	dbName := os.Getenv("POSTGRES_DB_NAME")
+	c = ("postgres://" + dbUser + ":" + dbPassword + "@" + pgHost + ":5432/" + dbName + "?sslmode=disable")
+	return
+}
+
 func ConnectToHistoricalDB() *sql.DB {
-	connStr := "postgres://postgres:example@localhost:5432/postgres?sslmode=disable"
+	err := godotenv.Load()
+	if err != nil {
+		slog.Warn("Error loading .env file, recovering variables from environment")
+	}
+
+	connStr := generateConnString()
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {

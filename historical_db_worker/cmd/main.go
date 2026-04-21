@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
+	"time"
+
 	histodb "histo-db/internal/historical-db"
 	redisdb "histo-db/internal/redis_db"
-	"time"
 )
 
 func main() {

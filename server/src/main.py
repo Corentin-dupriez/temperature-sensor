@@ -1,4 +1,5 @@
 import redis
+import json
 import asyncio
 from fastapi import Depends, FastAPI, WebSocket
 from dotenv import load_dotenv
@@ -6,7 +7,7 @@ import os
 import logging
 from redis.typing import ResponseT
 from src.models import TempReading
-from src.redis_db.redis_db import parse_data
+from src.redis_db import redis_db, parse_data
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List
 from fastapi.responses import JSONResponse
@@ -17,14 +18,8 @@ from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
 load_dotenv("../.env")
 
-REDIS_STREAM_KEY = "stream"
+rdb: redis.Redis = redis_db.connect_to_redis()
 
-# The redis_url and redis_port correspond to the Redis database containing the temperature and humidity measures
-redis_url, redis_port = os.environ.get("REDIS_CONN_STR", "backend:6379").split(":")
-
-rdb = redis.Redis(host=redis_url, port=int(redis_port), db=0, protocol=2)
-
-logging.info("Connected to Redis database")
 
 DATABASE_URL = f"postgresql://{os.environ.get('POSTGRES_DB_USER', 'postgres')}:{os.environ.get('POSTGRES_DB_PASSWORD', 'example')}@{os.environ.get('POSTGRES_DB_HOST', 'localhost')}:5432/{os.environ.get('POSTGRES_DB_NAME', 'postgres')}"
 
@@ -75,6 +70,8 @@ async def get_weekly_readings(db: Session = Depends(get_db)) -> JSONResponse:
 
 
 async def get_readings(timeframe: str, db: Session) -> List:
+    if timeframe not in ("week", "day"):
+        raise ValueError("The timeframe should be week or day")
     readings: List[None | dict] = []
     res = db.execute(
         text(
@@ -97,35 +94,15 @@ async def websocket_endpoint(websocket: WebSocket) -> None:
     await websocket.accept()
     logging.info("WebSocket connected")
     while True:
-        entry: ResponseT = rdb.xreadgroup(
-            groupname=os.environ.get("REDIS_PYTHON_CONSUMER_GROUP", "server-consumer"),
-            consumername=os.environ.get("REDIS_PYTHON_CONSUMER_NAME", "server"),
-            streams={REDIS_STREAM_KEY: ">"},
-            count=1,
-        )
+        entry = redis_db.read_stream(rdb)
         if entry != []:
-            data: dict = await parse_data(entry)
-            print(data)
-            new_data: TempReading = TempReading(**data)
-            await websocket.send_json({"data": data})
-            while entry:
-                await asyncio.sleep(1)
-                try:
-                    entry: ResponseT = rdb.xreadgroup(
-                        groupname=os.environ.get(
-                            "REDIS_PYTHON_CONSUMER_GROUP", "server-consumer"
-                        ),
-                        consumername=os.environ.get(
-                            "REDIS_PYTHON_CONSUMER_NAME", "server"
-                        ),
-                        streams={REDIS_STREAM_KEY: ">"},
-                        count=1,
-                    )
-                    data: dict = await parse_data(entry)
-                    print(data)
-                    await websocket.send_json({"data": data})
-                except IndexError:
-                    pass
+            data: dict[str, str] | None = await parse_data(entry)
+            new_data: TempReading = TempReading(
+                temp=data["temp"],
+                humidity=data["humidity"],
+                reading_datetime=data["time"],
+            )
+            await websocket.send_json({"data": new_data.model_dump()})
         else:
             print("No new entry, sleeping")
         await asyncio.sleep(1)

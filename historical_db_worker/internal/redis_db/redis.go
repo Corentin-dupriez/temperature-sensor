@@ -25,6 +25,7 @@ func ConnectToRedis() *redis.Client {
 	}
 	redisConnString := os.Getenv("REDIS_CONN_STR")
 	redisPassword := os.Getenv("REDIS_PASSWORD")
+	fmt.Printf("Connection string: %v, password: %v", redisConnString, redisPassword)
 	rdb := redis.NewClient(&redis.Options{
 		Addr:     redisConnString,
 		Password: redisPassword,

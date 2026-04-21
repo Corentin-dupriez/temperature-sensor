@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log/slog"
 	"os"
 
@@ -15,7 +14,6 @@ func main() {
 	err := godotenv.Load("../.env")
 	if err != nil {
 		slog.Error("error reading the .env file")
-		fmt.Println(os.Getenv("ARDUINO_PORT"))
 	}
 	port, err := sensorworker.OpenPort(os.Getenv("ARDUINO_PORT"))
 	if err != nil {
