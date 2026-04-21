@@ -1,7 +1,7 @@
 <template>
   <div>
-    <p v-if="data && data.length">{{data}}</p>
-    <p v-else>No readings for today</p>
+    <p v-if="data && data.length">{{data[0].temp}}C, {{data[0].humidity}}%</p>
+    <p v-else>No readings for this week</p>
   </div>
 </template>
 <script>
@@ -13,7 +13,7 @@ export default {
   },
   mounted() {
 
-      fetch(`http://localhost:8000/today`, {
+      fetch(`http://localhost:8000/week`, {
         method: "GET",
       })
       .then(response => response.json())

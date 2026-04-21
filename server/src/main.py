@@ -72,18 +72,19 @@ async def get_weekly_readings(db: Session = Depends(get_db)) -> JSONResponse:
 async def get_readings(timeframe: str, db: Session) -> List:
     if timeframe not in ("week", "day"):
         raise ValueError("The timeframe should be week or day")
+    if timeframe == "day":
+        query = f"SELECT * from readings where date_trunc('{timeframe}', time_reading) = date_trunc('{timeframe}', now())"
+    else:
+        query = f"SELECT avg(temperature), avg(humidity),date_trunc('day', time_reading)  from readings where date_trunc('{timeframe}', time_reading) = date_trunc('{timeframe}', now()) group by date_trunc('day', time_reading)"
+
     readings: List[None | dict] = []
-    res = db.execute(
-        text(
-            f"SELECT * from readings where date_trunc('{timeframe}', time_reading) = date_trunc('{timeframe}', now())"
-        )
-    )
+    res = db.execute(text(query))
     for result in res:
         readings.append(
             TempReading(
-                temp=result[1],
-                humidity=result[2],
-                reading_datetime=result[3].strftime("%d/%m/%Y %H:%M:%S"),
+                temp=result[0],
+                humidity=result[1],
+                reading_datetime=result[2].strftime("%d/%m/%Y %H:%M:%S"),
             ).model_dump()
         )
     return readings
